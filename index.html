@@ -1,32 +1,30 @@
-// Add this to your existing script
-async function handleWithdraw() {
-    // 1. Check if the user is connected
-    if (!tonConnectUI.connected) {
-        alert("Please connect your wallet to identify your account.");
-        return;
-    }
-
-    // 2. Get the user's address automatically
-    const userAddress = tonConnectUI.account.address;
-    const amountToWithdraw = activeStakingAmount;
-
-    if (amountToWithdraw <= 0) {
-        alert("You have no funds to withdraw.");
-        return;
-    }
-
-    // 3. The "Request" Logic
-    // In a production app, you would send this data to your database/API.
-    console.log(`Withdrawal Request: 
-        User: ${userAddress}
-        Amount: $${amountToWithdraw.toFixed(2)}
-    `);
-
-    // 4. UI Feedback
-    alert(`Withdrawal request for $${amountToWithdraw.toFixed(2)} submitted!\n\nFunds will be sent to:\n${userAddress.slice(0,6)}...${userAddress.slice(-6)}`);
+// Add this to your deposit success logic
+function recordDeposit(amount) {
+    const now = Date.now();
+    const unlockDate = now + (30 * 24 * 60 * 60 * 1000); // 30 Days later
     
-    // Optional: Reset balance after request (only do this if your backend is recording it!)
-    // activeStakingAmount = 0;
-    // localStorage.setItem('stakedBalance', 0);
-    // updateBalanceDisplay();
+    const depositData = {
+        amount: amount,
+        timestamp: now,
+        unlockDate: unlockDate
+    };
+    
+    localStorage.setItem('currentStake', JSON.stringify(depositData));
+}
+
+async function handleWithdraw() {
+    const data = JSON.parse(localStorage.getItem('currentStake'));
+    const now = Date.now();
+
+    if (!data || data.amount <= 0) {
+        return alert("No active stake found.");
+    }
+
+    if (now < data.unlockDate) {
+        const daysLeft = Math.ceil((data.unlockDate - now) / (1000 * 60 * 60 * 24));
+        return alert(`Withdrawal Locked! Your funds will be available in ${daysLeft} days.`);
+    }
+
+    // If time has passed, trigger the payout request
+    requestAutomatedPayout(data.amount);
 }
