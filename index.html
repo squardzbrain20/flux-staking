@@ -1,48 +1,154 @@
-// Function to handle the actual TON transaction
-async function processGas() {
-    const gasAmount = document.getElementById('investAmount').value * 0.03; // 3% fee
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flux Live Engine</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     
-    if (gasAmount <= 0) {
-        tg.showAlert("Please enter an investment amount first.");
-        return;
-    }
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Convert USD gas to TON (For now we assume 1 TON = $5.00 for simulation)
-    // In a real app, you'd fetch the live price
-    const tonToPay = (gasAmount / 5.0).toFixed(2); 
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrlgK_EyEJhuhLwG4iqmrWqXN2cam7azQ",
+            authDomain: "flux-staking.firebaseapp.com",
+            projectId: "flux-staking",
+            storageBucket: "flux-staking.firebasestorage.app",
+            messagingSenderId: "187171802936",
+            appId: "1:187171802936:web:3425417a6c1ec561077bcd",
+            measurementId: "G-F3ZSEHZ8WS"
+        };
 
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 60, // 60 seconds
-        messages: [
-            {
-                address: "YOUR_TON_ADMIN_WALLET_HERE", // <-- Put your TON address here
-                amount: (tonToPay * 1000000000).toString(), // Amount in nanoTON
-            }
-        ]
-    };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const tg = window.Telegram.WebApp;
+        const userId = tg.initDataUnsafe?.user?.id || "demo_user";
 
-    try {
-        tg.showProgress();
-        // This triggers the real popup in their Telegram wallet!
-        const result = await tonConnectUI.sendTransaction(transaction);
-        
-        if (result) {
-            // TRANSACTION SUCCESSFUL! 
-            // Now we update Firebase automatically
+        const ADMIN_WALLET = "UQCcMrZZkHhi0rpjh_LL3E4AiTXICYTuBcqRpcJ-KKEt8bO1";
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
+
+        async function loadUserData() {
             const userDoc = doc(db, "users", userId.toString());
-            await updateDoc(userDoc, { 
-                gasPaid: true,
-                status: "Active ⚡" 
-            });
-
-            tg.hideProgress();
-            tg.showAlert("✅ Payment Confirmed! Your yield engine is now live.");
-            showScreen('home-screen');
-            loadUserData(); // Refresh the UI
+            const docSnap = await getDoc(userDoc);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('display-balance').innerText = `$${data.balance.toFixed(2)}`;
+                document.getElementById('status-badge').innerText = data.status || "Inactive";
+                document.getElementById('status-badge').style.color = data.status === "Active ⚡" ? "#00ff88" : "#ffcc00";
+            } else {
+                await setDoc(userDoc, { balance: 0.00, status: "Inactive", activePlans: [], createdAt: new Date() });
+            }
         }
-    } catch (e) {
-        tg.hideProgress();
-        tg.showAlert("❌ Transaction cancelled or failed.");
-        console.error(e);
-    }
-}
+
+        // UNIVERSAL TRANSACTION HANDLER (Works for Gas & Products)
+        window.handlePayment = async (usdAmount, type, planName = "") => {
+            const tonPrice = 5.20; // Simulated TON price
+            const tonToPay = (usdAmount / tonPrice).toFixed(3);
+
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{ address: ADMIN_WALLET, amount: (tonToPay * 1000000000).toString() }]
+            };
+
+            try {
+                tg.showProgress();
+                const result = await tonConnectUI.sendTransaction(transaction);
+                if (result) {
+                    const userDoc = doc(db, "users", userId.toString());
+                    if (type === 'GAS') {
+                        await updateDoc(userDoc, { status: "Active ⚡" });
+                    } else if (type === 'PRODUCT') {
+                        await updateDoc(userDoc, { 
+                            activePlans: arrayUnion({ name: planName, date: new Date(), cost: usdAmount })
+                        });
+                    }
+                    tg.hideProgress();
+                    tg.showAlert(`✅ ${type === 'GAS' ? 'Activation' : planName} Successful!`);
+                    showScreen('home-screen');
+                    loadUserData();
+                }
+            } catch (e) {
+                tg.hideProgress();
+                tg.showAlert("Transaction cancelled.");
+            }
+        };
+
+        window.onload = loadUserData;
+    </script>
+
+    <style>
+        :root { --bg: #05070a; --card: #0f121a; --neon: #00d2ff; --gray: #8a8f98; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 0; }
+        .screen { display: none; padding: 20px; min-height: 100vh; }
+        .screen.active { display: block; }
+        .header { text-align: center; padding: 40px 0; }
+        .main-balance { font-size: 48px; font-weight: bold; }
+        .status-box { font-size: 14px; margin-top: 10px; font-weight: bold; }
+        .product-card { background: var(--card); border: 1px solid #1f232d; border-radius: 16px; margin-bottom: 15px; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-pay { width: 100%; padding: 18px; background: linear-gradient(90deg, #00d2ff, #9d50bb); border: none; border-radius: 12px; color: white; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        .btn-buy { background: var(--neon); color: black; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0a0d14; display: flex; justify-content: space-around; padding: 20px 0; border-top: 1px solid #1f232d; }
+        .nav-item { color: var(--gray); font-size: 12px; text-align: center; cursor: pointer; }
+        #ton-connect-button { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="home-screen" class="screen active">
+        <div class="header">
+            <div style="color: var(--gray);">Flux Assets</div>
+            <div class="main-balance" id="display-balance">$0.00</div>
+            <div class="status-box" id="status-badge">Inactive</div>
+        </div>
+        <div id="ton-connect-button"></div>
+        <button class="btn-pay" onclick="showScreen('gas-screen')">⛽ PAY GAS FEE</button>
+    </div>
+
+    <div id="profit-screen" class="screen">
+        <div class="header"><h2>Market Plans</h2></div>
+        
+        <div class="product-card">
+            <div><div style="font-weight: bold;">Binance Starter</div><div style="font-size: 12px; color: var(--gray);">$10.00</div></div>
+            <button class="btn-buy" onclick="handlePayment(10, 'PRODUCT', 'Binance Starter')">Buy</button>
+        </div>
+
+        <div class="product-card">
+            <div><div style="font-weight: bold;">Bitget Pro</div><div style="font-size: 12px; color: var(--gray);">$100.00</div></div>
+            <button class="btn-buy" onclick="handlePayment(100, 'PRODUCT', 'Bitget Pro')">Buy</button>
+        </div>
+        
+        <div class="product-card">
+            <div><div style="font-weight: bold;">OKX Elite</div><div style="font-size: 12px; color: var(--gray);">$500.00</div></div>
+            <button class="btn-buy" onclick="handlePayment(500, 'PRODUCT', 'OKX Elite')">Buy</button>
+        </div>
+    </div>
+
+    <div id="gas-screen" class="screen">
+        <div class="header"><h2>Gas Station</h2></div>
+        <input type="number" id="investAmount" style="width:100%; padding:15px; border-radius:12px; border:1px solid #333; background:#161b22; color:white;" placeholder="Investment Amount ($)" oninput="document.getElementById('gasVal').innerText = (this.value * 0.03).toFixed(2)">
+        <div style="text-align: center; margin-top: 20px;">
+            <div style="color: var(--gray);">Fee: $<span id="gasVal">0.00</span></div>
+        </div>
+        <button class="btn-pay" onclick="handlePayment(document.getElementById('gasVal').innerText, 'GAS')">PAY TON NOW</button>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item" onclick="showScreen('home-screen')">👛<br>Home</div>
+        <div class="nav-item" onclick="showScreen('profit-screen')">📈<br>Profit</div>
+        <div class="nav-item" onclick="showScreen('gas-screen')">⛽<br>Gas</div>
+    </div>
+
+    <script>
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+    </script>
+</body>
+</html>
