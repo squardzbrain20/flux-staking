@@ -3,52 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flux Staking Dashboard</title>
+    <title>Flux Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Our Obsidian & Neon Theme */
+        :root {
+            --bg-obsidian: #05070a;
+            --card-bg: #0f121a;
+            --neon-blue: #00d2ff;
+            --neon-purple: #9d50bb;
+            --text-gray: #8a8f98;
+        }
+
         body {
-            background-color: #0d1117; 
-            color: #ffffff;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-obsidian);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Header Section */
+        .header {
             padding: 20px;
+            text-align: center;
+        }
+
+        .balance-label { color: var(--text-gray); font-size: 14px; margin-bottom: 5px; }
+        .balance-amount { font-size: 32px; font-weight: bold; margin: 0; }
+        .profit-text { color: #00ff88; font-size: 14px; margin-top: 5px; }
+
+        /* Chart Area */
+        .chart-container {
+            width: 100%;
+            height: 180px;
+            margin-top: 10px;
+        }
+
+        /* Action Buttons Grid */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+        }
+
+        .action-btn {
+            background: var(--card-bg);
+            border: 1px solid #1f232d;
+            border-radius: 12px;
+            padding: 15px 5px;
+            text-align: center;
+            font-size: 12px;
+            color: white;
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 8px;
         }
-        .header {
-            color: #00d2ff; /* Neon Blue */
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
+
+        .action-btn.active { background: #2b33ff; border-color: var(--neon-blue); }
+
+        /* Asset List */
+        .asset-list { padding: 0 20px 80px 20px; }
+        .asset-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #1f232d;
         }
-        .welcome {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            color: #b392f0; /* Neon Purple */
+
+        .asset-info { display: flex; align-items: center; gap: 12px; }
+        .asset-icon { width: 35px; height: 35px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;}
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #0a0d14;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            border-top: 1px solid #1f232d;
         }
-        .card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 20px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
+
+        .nav-item { color: var(--text-gray); font-size: 10px; text-align: center; text-decoration: none; }
+        .nav-item.active { color: var(--neon-blue); }
     </style>
 </head>
 <body>
-    <div class="header">Flux Staking</div>
-    <div id="welcome-msg" class="welcome">Connecting...</div>
 
-    <div class="card">
-        <p>Current Balance</p>
-        <h2 style="color: #00d2ff;">$0.00</h2>
-        <button style="background: linear-gradient(90deg, #00d2ff, #9d50bb); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; width: 100%;">
-            STAKE NOW
-        </button>
+    <div class="header">
+        <div class="balance-label">Total Balance</div>
+        <div class="balance-amount">$12,457.89</div>
+        <div class="profit-text">+$1,254.56 (+10.86%)</div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="balanceChart"></canvas>
+    </div>
+
+    <div class="actions-grid">
+        <div class="action-btn active"><span>⬆️</span>Stake</div>
+        <div class="action-btn"><span>⛽</span>Gas</div>
+        <div class="action-btn"><span>🌙</span>Profit</div>
+        <div class="action-btn"><span>🕒</span>History</div>
+    </div>
+
+    <div class="asset-list" id="assetList">
+        <div class="asset-item">
+            <div class="asset-info">
+                <div class="asset-icon" style="background: #26a17b;">T</div>
+                <div><div>USDT</div><div style="font-size: 12px; color: var(--text-gray);">Tether</div></div>
+            </div>
+            <div style="text-align: right;"><div>262,530.00</div><div style="color: #00ff88; font-size: 12px;">+2.35%</div></div>
+        </div>
+        </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active">🏠<br>Home</div>
+        <div class="nav-item">⛽<br>Gas</div>
+        <div class="nav-item">📈<br>Profit</div>
+        <div class="nav-item">👤<br>Profile</div>
     </div>
 
     <script>
@@ -56,13 +135,28 @@
         tg.expand();
         tg.ready();
 
-        // Personalize with Telegram User Data
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('welcome-msg').innerText = `Welcome, ${user.first_name}!`;
-        } else {
-            document.getElementById('welcome-msg').innerText = `Welcome, Creator!`;
-        }
+        // Initialize Chart
+        const ctx = document.getElementById('balanceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1', '2', '3', '4', '5', '6', '7'],
+                datasets: [{
+                    data: [11000, 11500, 11200, 12000, 11800, 12300, 12457],
+                    borderColor: '#9d50bb',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
     </script>
 </body>
 </html>
