@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flux Staking Dashboard</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Our Obsidian & Neon Theme */
+        body {
+            background-color: #0d1117; 
+            color: #ffffff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            color: #00d2ff; /* Neon Blue */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        .welcome {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #b392f0; /* Neon Purple */
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">Flux Staking</div>
+    <div id="welcome-msg" class="welcome">Connecting...</div>
+
+    <div class="card">
+        <p>Current Balance</p>
+        <h2 style="color: #00d2ff;">$0.00</h2>
+        <button style="background: linear-gradient(90deg, #00d2ff, #9d50bb); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; width: 100%;">
+            STAKE NOW
+        </button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Personalize with Telegram User Data
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('welcome-msg').innerText = `Welcome, ${user.first_name}!`;
+        } else {
+            document.getElementById('welcome-msg').innerText = `Welcome, Creator!`;
+        }
+    </script>
+</body>
+</html>
