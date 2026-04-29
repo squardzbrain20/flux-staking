@@ -18,20 +18,15 @@
         body { background-color: var(--bg-obsidian); color: white; font-family: sans-serif; margin: 0; padding: 0; }
         .screen { display: none; padding-bottom: 80px; min-height: 100vh; }
         .screen.active { display: block; }
-        
         .header { padding: 20px; text-align: center; }
         .balance-amount { font-size: 32px; font-weight: bold; }
         .chart-container { width: 100%; height: 180px; }
-        
         .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
         .action-btn { background: var(--card-bg); border: 1px solid #1f232d; border-radius: 12px; padding: 15px 5px; text-align: center; color: white; cursor: pointer; font-size: 12px;}
-        
-        /* Gas Screen Specifics */
         .input-group { padding: 20px; }
         input { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #333; background: #161b22; color: white; font-size: 18px; box-sizing: border-box; }
         .gas-result { margin-top: 20px; padding: 15px; background: rgba(157, 80, 187, 0.1); border-radius: 10px; border: 1px dashed var(--neon-purple); text-align: center; }
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; background: linear-gradient(90deg, #00d2ff, #9d50bb); color: white; font-weight: bold; cursor: pointer; margin-top: 20px;}
-
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0a0d14; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1f232d; }
         .nav-item { color: var(--text-gray); font-size: 12px; text-align: center; cursor: pointer; }
         .nav-item.active { color: var(--neon-blue); }
@@ -44,7 +39,7 @@
         <div class="header">
             <div style="color: var(--text-gray);">Total Assets</div>
             <div class="balance-amount">$0.00</div>
-            <div id="wallet-status" style="font-size: 10px; color: #ffcc00;">Not Connected</div>
+            <div id="wallet-status" style="font-size: 12px; color: #ffcc00; font-weight: bold; margin-top: 5px;">Not Connected</div>
         </div>
         <div class="chart-container"><canvas id="balanceChart"></canvas></div>
         <div class="actions-grid">
@@ -64,12 +59,10 @@
         <div class="input-group">
             <label style="font-size: 12px; color: var(--text-gray);">Investment Amount ($)</label>
             <input type="number" id="investAmount" placeholder="100" oninput="calcGas()">
-            
             <div class="gas-result">
                 <div style="font-size: 12px; color: var(--text-gray);">Estimated Gas Fee</div>
                 <div id="gasValue" style="font-size: 24px; font-weight: bold; color: var(--neon-blue);">$0.00</div>
             </div>
-
             <button class="btn-main" onclick="processGas()">PAY GAS NOW</button>
             <p onclick="showScreen('home-screen')" style="text-align: center; color: var(--text-gray); font-size: 12px; margin-top: 20px;">← Back to Home</p>
         </div>
@@ -86,7 +79,6 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Wallet Logic
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
@@ -104,15 +96,9 @@
             }
         });
 
-        // App Logic
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            
-            // Update Nav visual
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-            if(id === 'home-screen') document.querySelector('.nav-item:nth-child(1)').classList.add('active');
-            if(id === 'gas-screen') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
         }
 
         function calcGas() {
@@ -126,12 +112,27 @@
                 tg.showAlert("Please enter an amount first.");
                 return;
             }
-            tg.showConfirm(`Proceed to pay ${gas} Gas fee?`, (ok) => {
-                if(ok) tg.showAlert("Processing transaction via your connected wallet...");
+
+            tg.showConfirm(`Confirm ${gas} Gas payment?`, (ok) => {
+                if(ok) {
+                    tg.showProgress(); // Shows Telegram's built-in loading spinner
+                    
+                    // Simulate processing time
+                    setTimeout(() => {
+                        tg.hideProgress();
+                        tg.showAlert("✅ Gas Purchase Confirmed! Your yield engine is now warming up.");
+                        
+                        // REDIRECT back to home
+                        showScreen('home-screen');
+                        
+                        // UPDATE status to show active engine
+                        document.getElementById('wallet-status').innerText = "Active Engine ⚡";
+                        document.getElementById('wallet-status').style.color = "#00d2ff";
+                    }, 3000);
+                }
             });
         }
 
-        // Chart
         const ctx = document.getElementById('balanceChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
