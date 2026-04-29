@@ -6,7 +6,7 @@
     <title>Flux Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         :root {
             --bg-obsidian: #05070a;
@@ -15,127 +15,80 @@
             --neon-purple: #9d50bb;
             --text-gray: #8a8f98;
         }
-
         body { background-color: var(--bg-obsidian); color: white; font-family: sans-serif; margin: 0; padding: 0; }
         .screen { display: none; padding-bottom: 80px; min-height: 100vh; }
         .screen.active { display: block; }
-
         .header { padding: 20px; text-align: center; }
         .balance-amount { font-size: 32px; font-weight: bold; }
         .chart-container { width: 100%; height: 180px; }
-        
-        .wallet-status { font-size: 10px; color: #ffcc00; margin-top: 5px; }
-
         .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
         .action-btn { background: var(--card-bg); border: 1px solid #1f232d; border-radius: 12px; padding: 15px 5px; text-align: center; color: white; cursor: pointer;}
-        
-        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; background: linear-gradient(90deg, #00d2ff, #9d50bb); color: white; font-weight: bold; cursor: pointer; }
-        
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0a0d14; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1f232d; }
         .nav-item { color: var(--text-gray); font-size: 12px; text-align: center; cursor: pointer; }
+        /* Hidden TonConnect button but required for logic */
+        #ton-connect-button { display: none; }
     </style>
 </head>
 <body>
 
     <div id="home-screen" class="screen active">
         <div class="header">
-            <div style="color: var(--text-gray);">Your Wallet Balance</div>
-            <div class="balance-amount" id="userBalance">$0.00</div>
-            <div id="walletAddr" class="wallet-status">Wallet Not Connected</div>
+            <div style="color: var(--text-gray);">Total Assets</div>
+            <div class="balance-amount">$0.00</div>
+            <div id="wallet-status" style="font-size: 10px; color: #ffcc00;">Not Connected</div>
         </div>
         <div class="chart-container"><canvas id="balanceChart"></canvas></div>
+        
         <div class="actions-grid">
-            <div class="action-btn" onclick="connectWallet()">🔗<br>Connect</div>
+            <div class="action-btn" id="custom-connect" onclick="connectWallet()">🔗<br>Connect</div>
             <div class="action-btn" onclick="showScreen('gas-screen')">⛽<br>Gas</div>
             <div class="action-btn">💸<br>Withdraw</div>
             <div class="action-btn">🕒<br>History</div>
         </div>
-        <p style="padding: 20px; font-size: 12px; color: var(--text-gray); text-align: center;">
-            ⚠️ You have 100% control of your funds. Only Gas fees are sent to the platform.
-        </p>
-    </div>
-
-    <div id="gas-screen" class="screen">
-        <div class="header"><h2>Purchase Gas</h2></div>
-        <div style="padding: 20px;">
-            <input type="number" id="investAmount" placeholder="Target Investment ($)" oninput="calcGas()" style="width:100%; padding:15px; background:#161b22; border:1px solid #333; color:white; border-radius:10px;">
-            <div style="margin:20px 0; text-align:center; padding:15px; border:1px dashed var(--neon-purple); border-radius:10px;">
-                <span style="color: var(--text-gray);">3% Fee:</span>
-                <span id="gasValue" style="font-size: 24px; font-weight: bold; color: var(--neon-blue);"> $0.00</span>
-            </div>
-            <button class="btn-main" onclick="sendGasPayment()">PAY GAS NOW</button>
-            <p onclick="showScreen('home-screen')" style="text-align:center; color:var(--text-gray); margin-top:20px; font-size:12px;">← Return Home</p>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active" onclick="showScreen('home-screen')">🏠<br>Home</div>
-        <div class="nav-item" onclick="showScreen('gas-screen')">⛽<br>Gas</div>
-        <div class="nav-item">📈<br>Profit</div>
-        <div class="nav-item">👤<br>Profile</div>
+        
+        <div id="ton-connect-button"></div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let userAddress = null;
-        const ADMIN_WALLET = "0xYourAdminWalletAddressHere"; // <-- Put your wallet here
+        // Initialize TonConnect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
 
         async function connectWallet() {
-            if (window.ethereum) {
-                try {
-                    const provider = new ethers.BrowserProvider(window.ethereum);
-                    const accounts = await provider.send("eth_requestAccounts", []);
-                    userAddress = accounts[0];
-                    document.getElementById('walletAddr').innerText = `Connected: ${userAddress.substring(0,6)}...${userAddress.substring(38)}`;
-                    document.getElementById('walletAddr').style.color = "#00ff88";
-                    tg.showScanQrPopup({ text: "Scan to confirm" });
-                } catch (e) {
-                    tg.showAlert("Wallet connection failed.");
-                }
-            } else {
-                tg.showAlert("Please open this in a Web3 compatible browser or Telegram Wallet.");
+            try {
+                const connectedWallet = await tonConnectUI.openModal();
+            } catch (e) {
+                console.error("Connection error", e);
             }
         }
 
-        async function sendGasPayment() {
-            if (!userAddress) {
-                tg.showAlert("Please connect your wallet first!");
-                return;
+        // Listen for wallet changes
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                document.getElementById('wallet-status').innerText = "Connected ✅";
+                document.getElementById('wallet-status').style.color = "#00ff88";
+                document.getElementById('custom-connect').innerHTML = "⚙️<br>Wallet";
             }
-            const amount = document.getElementById('gasValue').innerText.replace('$', '');
-            tg.showConfirm(`Confirm 3% Gas payment of $${amount}?`, async (ok) => {
-                if (ok) {
-                    tg.showProgress();
-                    // This is where the real blockchain transaction code goes
-                    // For now, we simulate success
-                    setTimeout(() => {
-                        tg.hideProgress();
-                        tg.showAlert("Gas Purchased Successfully! Your staking is now active.");
-                        showScreen('home-screen');
-                    }, 2000);
-                }
-            });
-        }
+        });
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function calcGas() {
-            const amount = document.getElementById('investAmount').value;
-            document.getElementById('gasValue').innerText = `$${(amount * 0.03).toFixed(2)}`;
-        }
-
+        // Chart Init
         const ctx = document.getElementById('balanceChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['1', '2', '3', '4', '5', '6', '7'],
                 datasets: [{
-                    data: [11000, 11500, 11200, 12000, 11800, 12300, 12457],
+                    data: [0, 0, 0, 0, 0, 0, 0],
                     borderColor: '#9d50bb',
                     borderWidth: 3, tension: 0.4, fill: false, pointRadius: 0
                 }]
