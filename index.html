@@ -16,18 +16,38 @@
             --text-gray: #8a8f98;
         }
         body { background-color: var(--bg-obsidian); color: white; font-family: sans-serif; margin: 0; padding: 0; }
-        .screen { display: none; padding-bottom: 80px; min-height: 100vh; }
+        .screen { display: none; padding-bottom: 100px; min-height: 100vh; }
         .screen.active { display: block; }
+        
         .header { padding: 20px; text-align: center; }
         .balance-amount { font-size: 32px; font-weight: bold; }
         .chart-container { width: 100%; height: 180px; }
+        
         .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
         .action-btn { background: var(--card-bg); border: 1px solid #1f232d; border-radius: 12px; padding: 15px 5px; text-align: center; color: white; cursor: pointer; font-size: 12px;}
+        
+        /* Profit/Product List */
+        .product-card {
+            background: var(--card-bg);
+            border: 1px solid #1f232d;
+            border-radius: 16px;
+            margin: 15px 20px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .exchange-info { display: flex; align-items: center; gap: 12px; }
+        .exchange-logo { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: black; }
+        .yield-badge { background: rgba(0, 255, 136, 0.1); color: #00ff88; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        .invest-btn { background: var(--neon-blue); color: black; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
+
+        /* Input/Form elements for Gas */
         .input-group { padding: 20px; }
         input { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #333; background: #161b22; color: white; font-size: 18px; box-sizing: border-box; }
-        .gas-result { margin-top: 20px; padding: 15px; background: rgba(157, 80, 187, 0.1); border-radius: 10px; border: 1px dashed var(--neon-purple); text-align: center; }
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; background: linear-gradient(90deg, #00d2ff, #9d50bb); color: white; font-weight: bold; cursor: pointer; margin-top: 20px;}
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0a0d14; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1f232d; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0a0d14; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1f232d; z-index: 100;}
         .nav-item { color: var(--text-gray); font-size: 12px; text-align: center; cursor: pointer; }
         .nav-item.active { color: var(--neon-blue); }
         #ton-connect-button { display: none; }
@@ -38,40 +58,113 @@
     <div id="home-screen" class="screen active">
         <div class="header">
             <div style="color: var(--text-gray);">Total Assets</div>
-            <div class="balance-amount">$0.00</div>
+            <div class="balance-amount" id="main-balance">$0.00</div>
             <div id="wallet-status" style="font-size: 12px; color: #ffcc00; font-weight: bold; margin-top: 5px;">Not Connected</div>
         </div>
         <div class="chart-container"><canvas id="balanceChart"></canvas></div>
         <div class="actions-grid">
-            <div class="action-btn" id="custom-connect" onclick="connectWallet()">🔗<br>Connect</div>
+            <div class="action-btn" onclick="connectWallet()">🔗<br>Connect</div>
             <div class="action-btn" onclick="showScreen('gas-screen')">⛽<br>Gas</div>
-            <div class="action-btn">💸<br>Withdraw</div>
+            <div class="action-btn" onclick="showScreen('profit-screen')">📈<br>Profit</div>
             <div class="action-btn">🕒<br>History</div>
         </div>
         <div id="ton-connect-button"></div>
     </div>
 
-    <div id="gas-screen" class="screen">
+    <div id="profit-screen" class="screen">
         <div class="header">
-            <h2>Gas Station</h2>
-            <p style="color: var(--text-gray);">3% Fee for Activation</p>
+            <h2>Yield Markets</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Select an exchange liquidity pool</p>
         </div>
+
+        <div id="product-list">
+            <div class="product-card">
+                <div class="exchange-info">
+                    <div class="exchange-logo" style="background: #F3BA2F;">BNB</div>
+                    <div>
+                        <div style="font-weight: bold;">Binance Pool</div>
+                        <div style="font-size: 11px; color: var(--text-gray);">Min: $10.00</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="yield-badge">20% PnL</div>
+                    <button class="invest-btn" onclick="invest('Binance')">Stake</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="exchange-info">
+                    <div class="exchange-logo" style="background: #00F0FF;">BGT</div>
+                    <div>
+                        <div style="font-weight: bold;">Bitget Alpha</div>
+                        <div style="font-size: 11px; color: var(--text-gray);">Min: $100.00</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="yield-badge">20% PnL</div>
+                    <button class="invest-btn" onclick="invest('Bitget')">Stake</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="exchange-info">
+                    <div class="exchange-logo" style="background: #FFFFFF; color: black;">OKX</div>
+                    <div>
+                        <div style="font-weight: bold;">OKX Arbitrage</div>
+                        <div style="font-size: 11px; color: var(--text-gray);">Min: $500.00</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="yield-badge">20% PnL</div>
+                    <button class="invest-btn" onclick="invest('OKX')">Stake</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="exchange-info">
+                    <div class="exchange-logo" style="background: #00B276;">MX</div>
+                    <div>
+                        <div style="font-weight: bold;">MEXC Global</div>
+                        <div style="font-size: 11px; color: var(--text-gray);">Min: $1,000.00</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="yield-badge">20% PnL</div>
+                    <button class="invest-btn" onclick="invest('MEXC')">Stake</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="exchange-info">
+                    <div class="exchange-logo" style="background: #24AE8F;">KCS</div>
+                    <div>
+                        <div style="font-weight: bold;">Kucoin Gems</div>
+                        <div style="font-size: 11px; color: var(--text-gray);">Min: $5,000.00</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="yield-badge">20% PnL</div>
+                    <button class="invest-btn" onclick="invest('Kucoin')">Stake</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gas-screen" class="screen">
+        <div class="header"><h2>Gas Station</h2></div>
         <div class="input-group">
-            <label style="font-size: 12px; color: var(--text-gray);">Investment Amount ($)</label>
             <input type="number" id="investAmount" placeholder="100" oninput="calcGas()">
             <div class="gas-result">
-                <div style="font-size: 12px; color: var(--text-gray);">Estimated Gas Fee</div>
                 <div id="gasValue" style="font-size: 24px; font-weight: bold; color: var(--neon-blue);">$0.00</div>
             </div>
             <button class="btn-main" onclick="processGas()">PAY GAS NOW</button>
-            <p onclick="showScreen('home-screen')" style="text-align: center; color: var(--text-gray); font-size: 12px; margin-top: 20px;">← Back to Home</p>
         </div>
     </div>
 
     <div class="bottom-nav">
         <div class="nav-item active" onclick="showScreen('home-screen')">🏠<br>Home</div>
         <div class="nav-item" onclick="showScreen('gas-screen')">⛽<br>Gas</div>
-        <div class="nav-item">📈<br>Profit</div>
+        <div class="nav-item" onclick="showScreen('profit-screen')">📈<br>Profit</div>
         <div class="nav-item">👤<br>Profile</div>
     </div>
 
@@ -79,26 +172,20 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect-button'
-        });
-
-        async function connectWallet() {
-            try { await tonConnectUI.openModal(); } catch (e) { console.error(e); }
-        }
-
-        tonConnectUI.onStatusChange(wallet => {
-            if (wallet) {
-                document.getElementById('wallet-status').innerText = "Connected ✅";
-                document.getElementById('wallet-status').style.color = "#00ff88";
-                document.getElementById('custom-connect').innerHTML = "⚙️<br>Wallet";
-            }
-        });
-
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            // Nav visual update
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            if(id === 'home-screen') document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+            if(id === 'gas-screen') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+            if(id === 'profit-screen') document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+        }
+
+        function invest(name) {
+            tg.showConfirm(`Activate 30-day ${name} Yield Pool?`, (ok) => {
+                if(ok) tg.showAlert(`Initiating ${name} connection... Ensure Gas is paid.`);
+            });
         }
 
         function calcGas() {
@@ -107,31 +194,29 @@
         }
 
         function processGas() {
-            const gas = document.getElementById('gasValue').innerText;
-            if (gas === "$0.00") {
-                tg.showAlert("Please enter an amount first.");
-                return;
-            }
-
-            tg.showConfirm(`Confirm ${gas} Gas payment?`, (ok) => {
-                if(ok) {
-                    tg.showProgress(); // Shows Telegram's built-in loading spinner
-                    
-                    // Simulate processing time
-                    setTimeout(() => {
-                        tg.hideProgress();
-                        tg.showAlert("✅ Gas Purchase Confirmed! Your yield engine is now warming up.");
-                        
-                        // REDIRECT back to home
-                        showScreen('home-screen');
-                        
-                        // UPDATE status to show active engine
-                        document.getElementById('wallet-status').innerText = "Active Engine ⚡";
-                        document.getElementById('wallet-status').style.color = "#00d2ff";
-                    }, 3000);
-                }
-            });
+            tg.showProgress();
+            setTimeout(() => {
+                tg.hideProgress();
+                tg.showAlert("Gas Confirmed!");
+                showScreen('home-screen');
+                document.getElementById('wallet-status').innerText = "Active Engine ⚡";
+                document.getElementById('wallet-status').style.color = "#00d2ff";
+            }, 2000);
         }
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://squardzbrain20.github.io/flux-staking/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
+
+        async function connectWallet() { try { await tonConnectUI.openModal(); } catch (e) {} }
+
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                document.getElementById('wallet-status').innerText = "Connected ✅";
+                document.getElementById('wallet-status').style.color = "#00ff88";
+            }
+        });
 
         const ctx = document.getElementById('balanceChart').getContext('2d');
         new Chart(ctx, {
